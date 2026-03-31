@@ -1,122 +1,130 @@
 # game.py
-import turtle
-import time
-import sys
+import pygame
 import random
-
+import sys
 import config
-from sprites import Player, Pipe, ScoreBoard
+from sprites import Player, Pipe
 
 class Game:
     def __init__(self):
-        # --- SCREEN SETUP ---
-        self.wn = turtle.Screen()
-        self.wn.bgcolor(config.COLOR_BG) 
-        self.wn.title("OOP Flappy Bird - flappINO")
-        self.wn.setup(width=config.SCREEN_WIDTH, height=config.SCREEN_HEIGHT)
-        self.wn.tracer(0)
-        self.wn.register_shape("ino.gif") 
+        pygame.init()
+        pygame.mixer.init() 
+        
+        self.screen = pygame.display.set_mode((config.SCREEN_WIDTH, config.SCREEN_HEIGHT))
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("Courier", 60, bold=True)
+        self.small_font = pygame.font.SysFont("Courier", 30, bold=True)
+        
+        # Load Audio
+        self.sfx_flap = pygame.mixer.Sound(config.SOUND_FLAP)
+        self.sfx_crash = pygame.mixer.Sound(config.SOUND_CRASH)
+        self.sfx_start = pygame.mixer.Sound(config.SOUND_START) 
+        pygame.mixer.music.load(config.MUSIC_BG)
+        pygame.mixer.music.set_volume(0.4) 
+        
+        self.reset_game()
 
-        # --- GAME STATE ---
-        self.pipes = []
+    def reset_game(self):
+        self.player = Player()
+        self.player_group = pygame.sprite.GroupSingle(self.player)
+        self.pipe_group = pygame.sprite.Group()
+        
         self.score = 0
         self.game_over = False
-        self.frame_count = 0
+        self.active = False 
+        self.current_speed = config.PIPE_SPEED 
+        self.death_time = 0 # NEW: Tracks when the player dies
+        
+        pygame.mixer.music.play(-1) 
+        
+        self.spawn_pipes() 
 
-        # --- INITIALIZATION ---
-        self.player = Player(-100, 0)
-        self.scoreboard = ScoreBoard()
-        self.scoreboard.draw_live_score(self.score)
+    def spawn_pipes(self):
+        gap_y = random.randint(200, config.SCREEN_HEIGHT - 200)
+        top_pipe = Pipe(config.SCREEN_WIDTH + 50, gap_y - config.VERTICAL_GAP // 2, True)
+        bottom_pipe = Pipe(config.SCREEN_WIDTH + 50, gap_y + config.VERTICAL_GAP // 2, False)
         
-        self.spawn_pipe_pair()
-        self.setup_controls()
-
-    def spawn_pipe_pair(self):
-        min_y = -150
-        max_y = 150
-        center_y = random.randint(min_y, max_y)
+        self.pipe_group.add(top_pipe, bottom_pipe)
+        self.last_pipe_spawned = top_pipe 
         
-        top_pipe_y = center_y + (config.GAP_SIZE / 2) + 300
-        top_cap_y = center_y + (config.GAP_SIZE / 2) + 15
-        
-        bottom_pipe_y = center_y - (config.GAP_SIZE / 2) - 300
-        bottom_cap_y = center_y - (config.GAP_SIZE / 2) - 15
-        
-        self.pipes.append(Pipe(config.PIPE_SPAWN_X, top_pipe_y, True, top_cap_y))
-        self.pipes.append(Pipe(config.PIPE_SPAWN_X, bottom_pipe_y, False, bottom_cap_y))
-
-    def handle_flap(self):
+    def trigger_death(self):
+        # NEW: Ensure we only trigger the death logic exactly once per run
         if not self.game_over:
-            self.player.flap()
+            self.game_over = True
+            self.death_time = pygame.time.get_ticks() # Record the exact millisecond of death
+            pygame.mixer.music.stop() 
+            self.sfx_crash.play()     
 
-    def restart(self):
-        if self.game_over:
-            self.player.goto(-100, 0)
-            self.player.dy = 0
-            self.player.setheading(0)
-            
-            for pipe in self.pipes:
-                pipe.hide()
-            self.pipes.clear()
-            
-            self.score = 0
-            self.scoreboard.draw_live_score(self.score)
-            self.spawn_pipe_pair()
-            self.frame_count = 0
-            self.game_over = False
-
-    def exit_game(self):
-        self.wn.bye()
-        sys.exit()
-
-    def setup_controls(self):
-        turtle.listen()
-        turtle.onkeypress(self.handle_flap, "space")
-        turtle.onkeypress(self.handle_flap, "w")
-        turtle.onkeypress(self.handle_flap, "W")
-        turtle.onkeypress(self.handle_flap, "Up")
-        turtle.onkeypress(self.restart, "r")
-        turtle.onkeypress(self.restart, "R")
-        turtle.onkeypress(self.exit_game, "Escape")
+    def draw_text(self, text, font, color, x, y):
+        img = font.render(text, True, color)
+        shadow = font.render(text, True, (0, 0, 0))
+        self.screen.blit(shadow, (x - shadow.get_width() // 2 + 2, y + 2))
+        self.screen.blit(img, (x - img.get_width() // 2, y))
 
     def run(self):
-        # --- MAIN GAME LOOP ---
         while True:
-            frame_start_time = time.perf_counter()
-            
-            if not self.game_over:
-                # 1. Update Player 
-                if self.player.update():
-                    self.game_over = True
-                    
-                # 2. Update Pipes & Check Collisions
-                for pipe in self.pipes[:]:
-                    pipe.update()
-                    
-                    if pipe.is_collision(self.player):
-                        self.game_over = True
-                        
-                    if not pipe.passed and pipe.logical_x < self.player.xcor() and not pipe.is_top:
-                        self.score += 1
-                        pipe.passed = True
-                        
-                    if pipe.logical_x < config.PIPE_DESPAWN_X:
-                        pipe.hide()
-                        self.pipes.remove(pipe)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        if not self.game_over:
+                            if not self.active: 
+                                self.active = True 
+                                self.sfx_start.play() 
+                            else:
+                                self.sfx_flap.play() 
+                                
+                            self.player.flap()
+                            
+                        elif self.game_over:
+                            # NEW: Only allow restart if 1000 milliseconds (1 second) have passed since death
+                            current_time = pygame.time.get_ticks()
+                            if current_time - self.death_time > 1000:
+                                self.reset_game()
 
-                # 3. Handle Rendering & Game State
-                if self.game_over:
-                    self.scoreboard.show_game_over()
-                else:
-                    self.scoreboard.draw_live_score(self.score)
+            self.screen.fill(config.COLOR_BG)
+
+            if self.active and not self.game_over:
+                self.current_speed = config.PIPE_SPEED + (self.score // 10)
+
+                if self.last_pipe_spawned.rect.x < config.SCREEN_WIDTH - config.HORIZONTAL_GAP:
+                    self.spawn_pipes()
+
+                if self.player.update(): 
+                    self.trigger_death()
                     
-                    self.frame_count += 1
-                    if self.frame_count >= 80:
-                        self.spawn_pipe_pair()
-                        self.frame_count = 0
-                        
-            self.wn.update()
+                self.pipe_group.update(self.current_speed)
+
+                if pygame.sprite.spritecollide(self.player, self.pipe_group, False, pygame.sprite.collide_mask):
+                    self.trigger_death()
+                    self.player.velocity = -7 
+
+                for pipe in self.pipe_group:
+                    if not hasattr(pipe, 'scored') and pipe.rect.right < self.player.rect.left:
+                        if not pipe.is_top: 
+                            self.score += 1
+                        pipe.scored = True
+
+            self.pipe_group.draw(self.screen)
             
-            frame_duration = time.perf_counter() - frame_start_time
-            if frame_duration < config.FRAME_TIME:
-                time.sleep(config.FRAME_TIME - frame_duration)
+            if self.game_over:
+                self.player.update()
+                
+            self.player_group.draw(self.screen)
+            
+            self.draw_text("flappINO", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 20)
+            self.draw_text(str(self.score), self.font, (255, 255, 255), config.SCREEN_WIDTH // 2, 60)
+
+            if not self.active and not self.game_over:
+                self.draw_text("PRESS SPACE TO START", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 300)
+
+            if self.game_over:
+                # NEW: Only show the "PRESS SPACE TO RESTART" text if the cooldown is actually finished!
+                self.draw_text("GAME OVER", self.font, (255, 255, 255), config.SCREEN_WIDTH // 2, 300)
+                if pygame.time.get_ticks() - self.death_time > 1000:
+                    self.draw_text("PRESS SPACE TO RESTART", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 360)
+
+            pygame.display.flip()
+            self.clock.tick(config.FPS)
