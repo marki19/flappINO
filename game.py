@@ -2,6 +2,7 @@
 import pygame
 import random
 import sys
+import asyncio # <-- NEW: Required for the web browser
 import config
 from sprites import Player, Pipe
 
@@ -15,7 +16,6 @@ class Game:
         self.font = pygame.font.SysFont("Courier", 60, bold=True)
         self.small_font = pygame.font.SysFont("Courier", 30, bold=True)
         
-        # Load Audio
         self.sfx_flap = pygame.mixer.Sound(config.SOUND_FLAP)
         self.sfx_crash = pygame.mixer.Sound(config.SOUND_CRASH)
         self.sfx_start = pygame.mixer.Sound(config.SOUND_START) 
@@ -33,10 +33,9 @@ class Game:
         self.game_over = False
         self.active = False 
         self.current_speed = config.PIPE_SPEED 
-        self.death_time = 0 # NEW: Tracks when the player dies
+        self.death_time = 0 
         
         pygame.mixer.music.play(-1) 
-        
         self.spawn_pipes() 
 
     def spawn_pipes(self):
@@ -48,10 +47,9 @@ class Game:
         self.last_pipe_spawned = top_pipe 
         
     def trigger_death(self):
-        # NEW: Ensure we only trigger the death logic exactly once per run
         if not self.game_over:
             self.game_over = True
-            self.death_time = pygame.time.get_ticks() # Record the exact millisecond of death
+            self.death_time = pygame.time.get_ticks() 
             pygame.mixer.music.stop() 
             self.sfx_crash.play()     
 
@@ -61,28 +59,29 @@ class Game:
         self.screen.blit(shadow, (x - shadow.get_width() // 2 + 2, y + 2))
         self.screen.blit(img, (x - img.get_width() // 2, y))
 
-    def run(self):
+    # <-- NEW: Added 'async' here!
+    async def run(self): 
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        if not self.game_over:
-                            if not self.active: 
-                                self.active = True 
-                                self.sfx_start.play() 
-                            else:
-                                self.sfx_flap.play() 
-                                
-                            self.player.flap()
+                    
+                # <-- NEW: Now accepts Spacebar OR a Mouse Click/Screen Tap!
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE or event.type == pygame.MOUSEBUTTONDOWN:
+                    if not self.game_over:
+                        if not self.active: 
+                            self.active = True 
+                            self.sfx_start.play() 
+                        else:
+                            self.sfx_flap.play() 
                             
-                        elif self.game_over:
-                            # NEW: Only allow restart if 1000 milliseconds (1 second) have passed since death
-                            current_time = pygame.time.get_ticks()
-                            if current_time - self.death_time > 1000:
-                                self.reset_game()
+                        self.player.flap()
+                        
+                    elif self.game_over:
+                        current_time = pygame.time.get_ticks()
+                        if current_time - self.death_time > 1000:
+                            self.reset_game()
 
             self.screen.fill(config.COLOR_BG)
 
@@ -118,13 +117,16 @@ class Game:
             self.draw_text(str(self.score), self.font, (255, 255, 255), config.SCREEN_WIDTH // 2, 60)
 
             if not self.active and not self.game_over:
-                self.draw_text("PRESS SPACE TO START", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 300)
+                # Updated text for mobile users
+                self.draw_text("TAP OR PRESS SPACE TO START", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 300)
 
             if self.game_over:
-                # NEW: Only show the "PRESS SPACE TO RESTART" text if the cooldown is actually finished!
                 self.draw_text("GAME OVER", self.font, (255, 255, 255), config.SCREEN_WIDTH // 2, 300)
                 if pygame.time.get_ticks() - self.death_time > 1000:
-                    self.draw_text("PRESS SPACE TO RESTART", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 360)
+                    self.draw_text("TAP OR PRESS SPACE TO RESTART", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 360)
 
             pygame.display.flip()
             self.clock.tick(config.FPS)
+            
+            # <-- NEW: Yields control to the web browser so it doesn't crash!
+            await asyncio.sleep(0)
