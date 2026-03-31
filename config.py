@@ -1,21 +1,22 @@
 # config.py
-import pygame
 
-# ENGINE SETUP
+# CLOCK & ENGINE SETUP
 FPS = 60
+FRAME_TIME = 1.0 / FPS
 
 # SCREEN SETUP
 SCREEN_WIDTH = 1080
 SCREEN_HEIGHT = 720
-COLOR_BG = (112, 197, 206)  
+COLOR_BG = "#70c5ce"
 
-# GAME PHYSICS
-GRAVITY = 0.4
-FLAP_STRENGTH = -8 
-PIPE_SPEED = 4 # Starting speed (Slightly slower and more manageable)
+# GAME PHYSICS & SPEEDS
+GRAVITY = 0.5
+FLAP_STRENGTH = 8
+PIPE_SPEED = 4 
 
 # PIPE SETTINGS
-HORIZONTAL_GAP = 400 # The exact distance between pipes (fixes the unusual gap!)
-VERTICAL_GAP = 200 # The hole the bird flies through
-COLOR_PIPE = (116, 191, 46)
-COLOR_PIPE_CAP = (82, 140, 34)
+PIPE_SPAWN_X = 600 
+PIPE_DESPAWN_X = -600
+GAP_SIZE = 180
+COLOR_PIPE = "#74bf2e"
+COLOR_PIPE_CAP = "#528c22"
