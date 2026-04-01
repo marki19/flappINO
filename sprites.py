@@ -9,7 +9,7 @@ import config as config
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        raw_image = pygame.image.load("assets/ino.gif").convert_alpha()
+        raw_image = pygame.image.load(config.CHARACTER).convert_alpha()
         
         # 1. SAVE THE ORIGINAL IMAGE
         self.original_image = pygame.transform.scale(raw_image, (130, 130))

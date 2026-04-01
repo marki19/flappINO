@@ -4,6 +4,9 @@ import pygame
 # ENGINE SETUP
 FPS = 60
 
+#CHARACTER IMAGE
+CHARACTER = "assets/player/ino.gif"
+
 # SCREEN SETUP
 SCREEN_WIDTH = 1080
 SCREEN_HEIGHT = 720
@@ -23,7 +26,7 @@ COLOR_PIPE = (116, 191, 46)
 COLOR_PIPE_CAP = (82, 140, 34)
 
 # AUDIO SETTINGS
-SOUND_FLAP = "assets/tapFX.ogg"
-SOUND_CRASH = "assets/gameOver.ogg"
-SOUND_START = "assets/gameStart.ogg" 
-MUSIC_BG = "assets/backgroundMusic.ogg"
+SOUND_FLAP = "assets/soundFX/tapFX.ogg"
+SOUND_CRASH = "assets/soundFX/gameOver.ogg"
+SOUND_START = "assets/soundFX/gameStart.ogg" 
+MUSIC_BG = "assets/soundFX/backgroundMusic.ogg"
