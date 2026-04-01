@@ -2,12 +2,13 @@
 import pygame
 import random
 import sys
-import asyncio # <-- NEW: Required for the web browser
-import config
+import config as config
 from sprites import Player, Pipe
 
 class Game:
     def __init__(self):
+        print("PYTHON GAME IS ALIVE AND RUNNING!")
+        
         pygame.init()
         pygame.mixer.init() 
         
@@ -20,7 +21,7 @@ class Game:
         self.sfx_crash = pygame.mixer.Sound(config.SOUND_CRASH)
         self.sfx_start = pygame.mixer.Sound(config.SOUND_START) 
         pygame.mixer.music.load(config.MUSIC_BG)
-        pygame.mixer.music.set_volume(0.4) 
+        pygame.mixer.music.set_volume(1.0) 
         
         self.reset_game()
 
@@ -59,15 +60,13 @@ class Game:
         self.screen.blit(shadow, (x - shadow.get_width() // 2 + 2, y + 2))
         self.screen.blit(img, (x - img.get_width() // 2, y))
 
-    # <-- NEW: Added 'async' here!
-    async def run(self): 
+    def run(self): 
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
                     
-                # <-- NEW: Now accepts Spacebar OR a Mouse Click/Screen Tap!
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE or event.type == pygame.MOUSEBUTTONDOWN:
                     if not self.game_over:
                         if not self.active: 
@@ -86,7 +85,13 @@ class Game:
             self.screen.fill(config.COLOR_BG)
 
             if self.active and not self.game_over:
-                self.current_speed = config.PIPE_SPEED + (self.score // 10)
+                # 1. Calculate and cap the speed
+                calculated_speed = config.PIPE_SPEED + (self.score // 10)
+                self.current_speed = min(calculated_speed, config.MAX_PIPE_SPEED)
+
+                # 2. Gently scale the gravity based on the speed increase
+                speed_increase = self.current_speed - config.PIPE_SPEED
+                self.player.gravity = config.GRAVITY + (speed_increase * 0.02)
 
                 if self.last_pipe_spawned.rect.x < config.SCREEN_WIDTH - config.HORIZONTAL_GAP:
                     self.spawn_pipes()
@@ -117,7 +122,6 @@ class Game:
             self.draw_text(str(self.score), self.font, (255, 255, 255), config.SCREEN_WIDTH // 2, 60)
 
             if not self.active and not self.game_over:
-                # Updated text for mobile users
                 self.draw_text("TAP OR PRESS SPACE TO START", self.small_font, (255, 255, 255), config.SCREEN_WIDTH // 2, 300)
 
             if self.game_over:
@@ -127,6 +131,3 @@ class Game:
 
             pygame.display.flip()
             self.clock.tick(config.FPS)
-            
-            # <-- NEW: Yields control to the web browser so it doesn't crash!
-            await asyncio.sleep(0)

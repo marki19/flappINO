@@ -12,7 +12,9 @@ COLOR_BG = (112, 197, 206)
 # GAME PHYSICS
 GRAVITY = 0.4
 FLAP_STRENGTH = -8 
-PIPE_SPEED = 4 
+MAX_FALL_SPEED = 14.5 
+PIPE_SPEED = 4
+MAX_PIPE_SPEED = 9 # <-- ADDED: Prevents pipes from moving too fast at high scores
 
 # PIPE SETTINGS
 HORIZONTAL_GAP = 400 
@@ -21,7 +23,7 @@ COLOR_PIPE = (116, 191, 46)
 COLOR_PIPE_CAP = (82, 140, 34)
 
 # AUDIO SETTINGS
-SOUND_FLAP = "soundFX/tapFX.mp3"
-SOUND_CRASH = "soundFX/gameOver.mp3"
-SOUND_START = "soundFX/gameStart.mp3" # <-- Added the new start sound here!
-MUSIC_BG = "soundFX/backgroundMusic.mp3"
+SOUND_FLAP = "assets/tapFX.ogg"
+SOUND_CRASH = "assets/gameOver.ogg"
+SOUND_START = "assets/gameStart.ogg" 
+MUSIC_BG = "assets/backgroundMusic.ogg"
